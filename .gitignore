@@ -1,0 +1,8 @@
+node_modules/
+dist/
+site-dist/
+chat-exporter-for-teams.zip
+release-evidence.json
+cws-release.log
+gha-creds-*.json
+.DS_Store

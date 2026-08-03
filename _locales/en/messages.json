@@ -1,0 +1,176 @@
+{
+  "extensionName": {
+    "message": "Chat Exporter for Microsoft Teams — Files & ZIP"
+  },
+  "extensionShortName": {
+    "message": "Chat Export"
+  },
+  "extensionDescription": {
+    "message": "Export Microsoft Teams chats with messages, images, accessible files and links to a private ZIP. Runs locally; no admin access."
+  },
+  "actionTitle": {
+    "message": "Export current Teams chat to ZIP"
+  },
+  "popupTitle": {
+    "message": "Chat Exporter"
+  },
+  "popupSubtitle": {
+    "message": "for Microsoft Teams"
+  },
+  "checkingTitle": {
+    "message": "Checking this tab"
+  },
+  "checkingDetail": {
+    "message": "Looking for an open Teams conversation…"
+  },
+  "disclosureTitle": {
+    "message": "Private local export"
+  },
+  "disclosureDetail": {
+    "message": "Review how the extension handles the open conversation."
+  },
+  "disclosureText": {
+    "message": "The extension reads the open conversation and accessible file links to create an archive on this device. Nothing is sent to the developer."
+  },
+  "continueButton": {
+    "message": "Continue"
+  },
+  "chatDetected": {
+    "message": "Chat detected"
+  },
+  "currentConversation": {
+    "message": "Current conversation"
+  },
+  "includeAttachments": {
+    "message": "Include accessible files"
+  },
+  "exportButton": {
+    "message": "Export chat to ZIP"
+  },
+  "localOnly": {
+    "message": "Processed locally. Nothing is sent to us."
+  },
+  "openChatTitle": {
+    "message": "Open a Teams conversation"
+  },
+  "openChatDetail": {
+    "message": "Open a personal or group chat in Microsoft Teams, then try again."
+  },
+  "openTeamsButton": {
+    "message": "Open Microsoft Teams"
+  },
+  "exportStartingTitle": {
+    "message": "Export started"
+  },
+  "exportStartingDetail": {
+    "message": "Follow progress in the Teams tab."
+  },
+  "errorTitle": {
+    "message": "Could not start export"
+  },
+  "errorGeneric": {
+    "message": "Reload the Teams tab and try again."
+  },
+  "errorInjectionFailed": {
+    "message": "The exporter could not be injected. Reload the Teams tab and try again."
+  },
+  "overlayTitle": {
+    "message": "Chat Exporter"
+  },
+  "phasePreparing": {
+    "message": "Preparing export…"
+  },
+  "statusCheckingChat": {
+    "message": "Checking the open conversation."
+  },
+  "phaseFindingChat": {
+    "message": "Finding the open chat"
+  },
+  "statusKeepTabOpen": {
+    "message": "Keep this Teams tab open until the archive is ready."
+  },
+  "phaseReadingHistory": {
+    "message": "Loading chat history"
+  },
+  "statusCaptureStep": {
+    "message": "Step {step}: position {top} / {height}"
+  },
+  "logEarlierMessages": {
+    "message": "Teams: requested earlier messages"
+  },
+  "phaseHistoryLoaded": {
+    "message": "History loaded"
+  },
+  "statusHistoryLoaded": {
+    "message": "{messages} messages and {attachments} attachment candidates found."
+  },
+  "phaseDownloadingAttachments": {
+    "message": "Downloading accessible files"
+  },
+  "statusAttachmentProgress": {
+    "message": "{current} of {total}: {filename}"
+  },
+  "phaseBuildingZip": {
+    "message": "Building ZIP"
+  },
+  "statusZipFiles": {
+    "message": "Files in archive: {count}"
+  },
+  "statusZipCrc": {
+    "message": "Checking {filename}"
+  },
+  "phaseReady": {
+    "message": "Archive ready"
+  },
+  "phaseError": {
+    "message": "Export stopped"
+  },
+  "phaseCancelled": {
+    "message": "Export cancelled"
+  },
+  "statusCancelled": {
+    "message": "No partial ZIP was created. Start the export again to retry."
+  },
+  "cancelButton": {
+    "message": "Cancel export"
+  },
+  "cancellingButton": {
+    "message": "Cancelling…"
+  },
+  "downloadButton": {
+    "message": "Download ZIP"
+  },
+  "closeButton": {
+    "message": "Close"
+  },
+  "messagesLabel": {
+    "message": "messages"
+  },
+  "attachmentsLabel": {
+    "message": "attachments"
+  },
+  "downloadedLabel": {
+    "message": "downloaded"
+  },
+  "errorUnsupportedPage": {
+    "message": "Open teams.cloud.microsoft or teams.microsoft.com and select a chat first."
+  },
+  "errorChatNotFound": {
+    "message": "No messages were found. Open a personal or group chat and try again."
+  },
+  "errorScrollerNotFound": {
+    "message": "The message list could not be found. Make sure a chat—not the Files tab—is open."
+  },
+  "errorAlreadyRunning": {
+    "message": "An export is already running in this tab."
+  },
+  "errorCaptureLimit": {
+    "message": "The history limit was reached before the beginning of the chat could be confirmed. No partial ZIP was created."
+  },
+  "errorZipBuild": {
+    "message": "The ZIP could not be created. Reduce attachment size or retry without files."
+  },
+  "errorDownload": {
+    "message": "The browser could not start the ZIP download. Use the Download ZIP button in the progress panel."
+  }
+}

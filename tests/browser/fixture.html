@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'nonce-browser-fixture'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; require-trusted-types-for 'script'; trusted-types 'none'">
+  <title>Browser fixture</title>
+  <style>
+    body { font-family: system-ui; }
+    #fixture-scroller { width: 600px; height: 180px; overflow-y: auto; border: 1px solid #ccc; }
+    .spacer { height: 300px; }
+  </style>
+</head>
+<body>
+  <main id="app"></main>
+  <section id="fixture-scroller" data-tid="message-pane-list-viewport">
+    <div class="spacer"></div>
+    <article data-tid="chat-pane-message" data-mid="1700000000000">
+      <span id="author-1700000000000">Ada Lovelace</span>
+      <time id="timestamp-1700000000000" datetime="2026-08-02T12:00:00.000Z"></time>
+      <div data-tid="message-content" class="remove" style="color:red" onclick="alert(1)">
+        Hello <strong>team</strong>
+        <a href="https://example.com/docs?a=1&amp;b=2" onclick="alert(1)">Docs</a>
+        <a href="javascript:alert(1)">Unsafe</a>
+        <img src="data:image/png;base64,iVBORw0KGgo=" alt="diagram.png" width="240" height="160" onerror="alert(1)">
+        <script>alert(1)</script>
+      </div>
+      <button data-tid="message-reaction-like" aria-label="Like reaction"></button>
+    </article>
+    <div role="group" data-tid="message-group-container">
+      <span data-tid="message-group-author">Grace Hopper</span>
+      <article data-tid="chat-pane-message" data-mid="1700000100000">
+        <time datetime="2026-08-02T12:01:40.000Z"></time>
+        <div data-tid="message-content">Second message <a href="https://tenant.sharepoint.com/file.docx">file.docx</a></div>
+      </article>
+    </div>
+  </section>
+  <output id="test-output" data-test-status="running">RUNNING</output>
+  <script nonce="browser-fixture" src="../../dist/browser-fixture.js"></script>
+</body>
+</html>

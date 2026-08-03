@@ -1,0 +1,176 @@
+{
+  "extensionName": {
+    "message": "Експорт чатів Microsoft Teams — файли й ZIP"
+  },
+  "extensionShortName": {
+    "message": "Експорт чату"
+  },
+  "extensionDescription": {
+    "message": "Експортує чати Microsoft Teams, зображення, доступні файли й посилання у приватний ZIP. Локально, без прав адміністратора."
+  },
+  "actionTitle": {
+    "message": "Експортувати поточний чат Teams у ZIP"
+  },
+  "popupTitle": {
+    "message": "Експорт чату"
+  },
+  "popupSubtitle": {
+    "message": "для Microsoft Teams"
+  },
+  "checkingTitle": {
+    "message": "Перевіряю вкладку"
+  },
+  "checkingDetail": {
+    "message": "Шукаю відкриту розмову Teams…"
+  },
+  "disclosureTitle": {
+    "message": "Приватний локальний експорт"
+  },
+  "disclosureDetail": {
+    "message": "Як розширення обробляє відкриту розмову."
+  },
+  "disclosureText": {
+    "message": "Розширення читає відкриту розмову й доступні посилання на файли, щоб створити архів на цьому пристрої. Розробнику нічого не надсилається."
+  },
+  "continueButton": {
+    "message": "Продовжити"
+  },
+  "chatDetected": {
+    "message": "Чат знайдено"
+  },
+  "currentConversation": {
+    "message": "Поточна розмова"
+  },
+  "includeAttachments": {
+    "message": "Додати доступні файли"
+  },
+  "exportButton": {
+    "message": "Експортувати чат у ZIP"
+  },
+  "localOnly": {
+    "message": "Обробка локально. Нам нічого не надсилається."
+  },
+  "openChatTitle": {
+    "message": "Відкрийте розмову Teams"
+  },
+  "openChatDetail": {
+    "message": "Відкрийте особистий або груповий чат у Microsoft Teams і повторіть."
+  },
+  "openTeamsButton": {
+    "message": "Відкрити Microsoft Teams"
+  },
+  "exportStartingTitle": {
+    "message": "Експорт розпочато"
+  },
+  "exportStartingDetail": {
+    "message": "Стежте за прогресом у вкладці Teams."
+  },
+  "errorTitle": {
+    "message": "Не вдалося почати експорт"
+  },
+  "errorGeneric": {
+    "message": "Перезавантажте вкладку Teams і повторіть."
+  },
+  "errorInjectionFailed": {
+    "message": "Не вдалося запустити експортер. Перезавантажте вкладку Teams і повторіть."
+  },
+  "overlayTitle": {
+    "message": "Експорт чату"
+  },
+  "phasePreparing": {
+    "message": "Підготовка експорту…"
+  },
+  "statusCheckingChat": {
+    "message": "Перевіряю відкриту розмову."
+  },
+  "phaseFindingChat": {
+    "message": "Шукаю відкритий чат"
+  },
+  "statusKeepTabOpen": {
+    "message": "Не закривайте цю вкладку Teams до готовності архіву."
+  },
+  "phaseReadingHistory": {
+    "message": "Завантажую історію чату"
+  },
+  "statusCaptureStep": {
+    "message": "Крок {step}: позиція {top} / {height}"
+  },
+  "logEarlierMessages": {
+    "message": "Teams: запитано раніші повідомлення"
+  },
+  "phaseHistoryLoaded": {
+    "message": "Історію завантажено"
+  },
+  "statusHistoryLoaded": {
+    "message": "Знайдено повідомлень: {messages}; вкладень: {attachments}."
+  },
+  "phaseDownloadingAttachments": {
+    "message": "Завантажую доступні файли"
+  },
+  "statusAttachmentProgress": {
+    "message": "{current} з {total}: {filename}"
+  },
+  "phaseBuildingZip": {
+    "message": "Створюю ZIP"
+  },
+  "statusZipFiles": {
+    "message": "Файлів в архіві: {count}"
+  },
+  "statusZipCrc": {
+    "message": "Перевіряю {filename}"
+  },
+  "phaseReady": {
+    "message": "Архів готовий"
+  },
+  "phaseError": {
+    "message": "Експорт зупинено"
+  },
+  "phaseCancelled": {
+    "message": "Експорт скасовано"
+  },
+  "statusCancelled": {
+    "message": "Частковий ZIP не створювався. Запустіть експорт ще раз."
+  },
+  "cancelButton": {
+    "message": "Скасувати експорт"
+  },
+  "cancellingButton": {
+    "message": "Скасовую…"
+  },
+  "downloadButton": {
+    "message": "Завантажити ZIP"
+  },
+  "closeButton": {
+    "message": "Закрити"
+  },
+  "messagesLabel": {
+    "message": "повідомлення"
+  },
+  "attachmentsLabel": {
+    "message": "вкладення"
+  },
+  "downloadedLabel": {
+    "message": "завантажено"
+  },
+  "errorUnsupportedPage": {
+    "message": "Відкрийте teams.cloud.microsoft або teams.microsoft.com і виберіть чат."
+  },
+  "errorChatNotFound": {
+    "message": "Повідомлень не знайдено. Відкрийте особистий або груповий чат і повторіть."
+  },
+  "errorScrollerNotFound": {
+    "message": "Список повідомлень не знайдено. Переконайтеся, що відкрито чат, а не вкладку «Файли»."
+  },
+  "errorAlreadyRunning": {
+    "message": "У цій вкладці вже виконується експорт."
+  },
+  "errorCaptureLimit": {
+    "message": "Ліміт завантаження досягнуто до підтвердження початку чату. Частковий ZIP не створювався."
+  },
+  "errorZipBuild": {
+    "message": "Не вдалося створити ZIP. Зменште обсяг вкладень або повторіть без файлів."
+  },
+  "errorDownload": {
+    "message": "Браузер не зміг почати завантаження ZIP. Натисніть «Завантажити ZIP» на панелі прогресу."
+  }
+}

@@ -1,0 +1,217 @@
+name: Chrome Web Store Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      publish_type:
+        description: Upload only, submit for immediate publication after approval, or stage after approval
+        required: true
+        type: choice
+        default: UPLOAD_ONLY
+        options:
+          - UPLOAD_ONLY
+          - DEFAULT_PUBLISH
+          - STAGED_PUBLISH
+      skip_review:
+        description: Attempt to skip review only when the item is eligible
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  id-token: write
+
+concurrency:
+  group: chrome-web-store-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: chrome-web-store
+    env:
+      GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+      GCP_SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+      GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+      CWS_PUBLISHER_ID: ${{ secrets.CWS_PUBLISHER_ID }}
+      CWS_EXTENSION_ID: ${{ secrets.CWS_EXTENSION_ID }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Resolve version and release mode
+        id: release
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+          REQUESTED_PUBLISH_TYPE: ${{ inputs.publish_type || 'UPLOAD_ONLY' }}
+          REQUESTED_SKIP_REVIEW: ${{ inputs.skip_review || false }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(node -p "JSON.parse(require('node:fs').readFileSync('manifest.json', 'utf8')).version")"
+          tag="v${version}"
+          tag_exists=false
+          if git rev-parse -q --verify "refs/tags/${tag}" >/dev/null; then tag_exists=true; fi
+
+          version_changed=true
+          create_release=false
+          publish_type="${REQUESTED_PUBLISH_TYPE}"
+          skip_review="${REQUESTED_SKIP_REVIEW}"
+          if [[ "${EVENT_NAME}" == "push" ]]; then
+            publish_type="UPLOAD_ONLY"
+            skip_review="false"
+            previous_version=""
+            if [[ -n "${BEFORE_SHA}" && ! "${BEFORE_SHA}" =~ ^0+$ ]]; then
+              previous_version="$(git show "${BEFORE_SHA}:manifest.json" 2>/dev/null | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{process.stdout.write(JSON.parse(s).version||'')}catch{}})" || true)"
+            fi
+            if [[ "${previous_version}" == "${version}" ]]; then version_changed=false; fi
+            if [[ "${version_changed}" == "true" && "${tag_exists}" == "false" ]]; then create_release=true; fi
+          fi
+
+          should_upload=true
+          if [[ "${EVENT_NAME}" == "push" && ( "${version_changed}" != "true" || "${tag_exists}" == "true" ) ]]; then should_upload=false; fi
+
+          auth_mode="none"
+          if [[ -n "${CWS_PUBLISHER_ID}" && -n "${CWS_EXTENSION_ID}" ]]; then
+            if [[ -n "${GCP_WORKLOAD_IDENTITY_PROVIDER}" && -n "${GCP_SERVICE_ACCOUNT}" ]]; then auth_mode="wif";
+            elif [[ -n "${GOOGLE_CREDENTIALS}" ]]; then auth_mode="key";
+            fi
+          fi
+
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+          echo "tag=${tag}" >> "${GITHUB_OUTPUT}"
+          echo "should_upload=${should_upload}" >> "${GITHUB_OUTPUT}"
+          echo "create_release=${create_release}" >> "${GITHUB_OUTPUT}"
+          echo "publish_type=${publish_type}" >> "${GITHUB_OUTPUT}"
+          echo "skip_review=${skip_review}" >> "${GITHUB_OUTPUT}"
+          echo "auth_mode=${auth_mode}" >> "${GITHUB_OUTPUT}"
+
+      - name: Report skipped automatic release
+        if: ${{ steps.release.outputs.should_upload != 'true' }}
+        run: echo "No new untagged manifest version was detected; store delivery is skipped."
+
+      - name: Set up Node.js 24
+        if: ${{ steps.release.outputs.should_upload == 'true' }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: Install project metadata
+        if: ${{ steps.release.outputs.should_upload == 'true' }}
+        run: npm ci
+
+      - name: Resolve Chromium and Xvfb
+        if: ${{ steps.release.outputs.should_upload == 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          browser="$(command -v google-chrome-stable || command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          if [[ -z "${browser}" ]]; then echo "No Chromium-compatible browser is installed." >&2; exit 1; fi
+          if ! command -v xvfb-run >/dev/null 2>&1; then sudo apt-get update && sudo apt-get install -y xvfb; fi
+          echo "CHROMIUM_PATH=${browser}" >> "${GITHUB_ENV}"
+
+      - name: Run complete verification
+        if: ${{ steps.release.outputs.should_upload == 'true' }}
+        run: npm test
+
+      - name: Upload validated workflow artifact
+        if: ${{ steps.release.outputs.should_upload == 'true' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: chat-exporter-for-teams-${{ steps.release.outputs.version }}
+          path: chat-exporter-for-teams.zip
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Report missing store credentials
+        if: ${{ steps.release.outputs.should_upload == 'true' && steps.release.outputs.auth_mode == 'none' }}
+        run: echo "Chrome Web Store credentials are not configured. The verified ZIP is available as a workflow artifact; no tag or GitHub Release will be created."
+
+      - id: auth_wif
+        name: Authenticate with Workload Identity Federation
+        if: ${{ steps.release.outputs.should_upload == 'true' && steps.release.outputs.auth_mode == 'wif' }}
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ env.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/chromewebstore
+          create_credentials_file: false
+
+      - id: key_metadata
+        name: Resolve service account from key
+        if: ${{ steps.release.outputs.should_upload == 'true' && steps.release.outputs.auth_mode == 'key' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          email="$(node -e "const v=JSON.parse(process.env.GOOGLE_CREDENTIALS);if(!v.client_email)process.exit(1);process.stdout.write(v.client_email)")"
+          echo "service_account=${email}" >> "${GITHUB_OUTPUT}"
+
+      - id: auth_key
+        name: Authenticate with service-account key
+        if: ${{ steps.release.outputs.should_upload == 'true' && steps.release.outputs.auth_mode == 'key' }}
+        uses: google-github-actions/auth@v3
+        with:
+          credentials_json: ${{ env.GOOGLE_CREDENTIALS }}
+          service_account: ${{ steps.key_metadata.outputs.service_account }}
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/chromewebstore
+          create_credentials_file: false
+
+      - id: token
+        name: Resolve short-lived access token
+        if: ${{ steps.release.outputs.should_upload == 'true' && steps.release.outputs.auth_mode != 'none' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          token="${{ steps.auth_wif.outputs.access_token }}"
+          if [[ -z "${token}" ]]; then token="${{ steps.auth_key.outputs.access_token }}"; fi
+          if [[ -z "${token}" ]]; then echo "Authentication did not return an access token." >&2; exit 1; fi
+          echo "::add-mask::${token}"
+          echo "access_token=${token}" >> "${GITHUB_OUTPUT}"
+
+      - name: Upload to Chrome Web Store API V2
+        id: store_upload
+        if: ${{ steps.release.outputs.should_upload == 'true' && steps.release.outputs.auth_mode != 'none' }}
+        env:
+          CWS_ACCESS_TOKEN: ${{ steps.token.outputs.access_token }}
+          CWS_PUBLISH_TYPE: ${{ steps.release.outputs.publish_type }}
+          CWS_SKIP_REVIEW: ${{ steps.release.outputs.skip_review }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/cws-release.mjs chat-exporter-for-teams.zip 2>&1 | tee cws-release.log
+          grep -Fq 'Upload finished successfully.' cws-release.log
+          if [[ "${CWS_PUBLISH_TYPE}" == "UPLOAD_ONLY" ]]; then grep -Fq 'Skipping publish step.' cws-release.log; fi
+
+      - name: Upload verified delivery evidence
+        if: ${{ steps.store_upload.outcome == 'success' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: chat-exporter-release-evidence-${{ steps.release.outputs.version }}
+          path: |
+            release-evidence.json
+            cws-release.log
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Create GitHub Release after verified automatic upload
+        if: ${{ github.event_name == 'push' && steps.release.outputs.create_release == 'true' && steps.store_upload.outcome == 'success' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.release.outputs.tag }}
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          gh release create "${TAG}" chat-exporter-for-teams.zip release-evidence.json \
+            --target "${GITHUB_SHA}" \
+            --title "Chat Exporter for Microsoft Teams ${VERSION}" \
+            --generate-notes

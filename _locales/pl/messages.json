@@ -1,0 +1,176 @@
+{
+  "extensionName": {
+    "message": "Eksport czatów Microsoft Teams — pliki i ZIP"
+  },
+  "extensionShortName": {
+    "message": "Eksport"
+  },
+  "extensionDescription": {
+    "message": "Eksportuje czaty Microsoft Teams, obrazy, dostępne pliki i linki do prywatnego ZIP. Lokalnie, bez uprawnień administratora."
+  },
+  "actionTitle": {
+    "message": "Eksportuj bieżący czat Teams do ZIP"
+  },
+  "popupTitle": {
+    "message": "Eksport czatu"
+  },
+  "popupSubtitle": {
+    "message": "dla Microsoft Teams"
+  },
+  "checkingTitle": {
+    "message": "Sprawdzanie karty"
+  },
+  "checkingDetail": {
+    "message": "Wyszukiwanie otwartej rozmowy Teams…"
+  },
+  "disclosureTitle": {
+    "message": "Prywatny eksport lokalny"
+  },
+  "disclosureDetail": {
+    "message": "Jak rozszerzenie przetwarza otwartą rozmowę."
+  },
+  "disclosureText": {
+    "message": "Rozszerzenie odczytuje otwartą rozmowę i dostępne linki do plików, aby utworzyć archiwum na tym urządzeniu. Nic nie jest wysyłane do dewelopera."
+  },
+  "continueButton": {
+    "message": "Kontynuuj"
+  },
+  "chatDetected": {
+    "message": "Wykryto czat"
+  },
+  "currentConversation": {
+    "message": "Bieżąca rozmowa"
+  },
+  "includeAttachments": {
+    "message": "Dołącz dostępne pliki"
+  },
+  "exportButton": {
+    "message": "Eksportuj czat do ZIP"
+  },
+  "localOnly": {
+    "message": "Przetwarzanie lokalne. Nic nie jest do nas wysyłane."
+  },
+  "openChatTitle": {
+    "message": "Otwórz rozmowę Teams"
+  },
+  "openChatDetail": {
+    "message": "Otwórz czat osobisty lub grupowy w Microsoft Teams i spróbuj ponownie."
+  },
+  "openTeamsButton": {
+    "message": "Otwórz Microsoft Teams"
+  },
+  "exportStartingTitle": {
+    "message": "Eksport rozpoczęty"
+  },
+  "exportStartingDetail": {
+    "message": "Postęp jest widoczny na karcie Teams."
+  },
+  "errorTitle": {
+    "message": "Nie udało się rozpocząć eksportu"
+  },
+  "errorGeneric": {
+    "message": "Odśwież kartę Teams i spróbuj ponownie."
+  },
+  "errorInjectionFailed": {
+    "message": "Nie udało się uruchomić eksportera. Odśwież kartę Teams i spróbuj ponownie."
+  },
+  "overlayTitle": {
+    "message": "Eksport czatu"
+  },
+  "phasePreparing": {
+    "message": "Przygotowywanie eksportu…"
+  },
+  "statusCheckingChat": {
+    "message": "Sprawdzanie otwartej rozmowy."
+  },
+  "phaseFindingChat": {
+    "message": "Wyszukiwanie otwartego czatu"
+  },
+  "statusKeepTabOpen": {
+    "message": "Pozostaw tę kartę Teams otwartą do czasu utworzenia archiwum."
+  },
+  "phaseReadingHistory": {
+    "message": "Ładowanie historii czatu"
+  },
+  "statusCaptureStep": {
+    "message": "Krok {step}: pozycja {top} / {height}"
+  },
+  "logEarlierMessages": {
+    "message": "Teams: zażądano wcześniejszych wiadomości"
+  },
+  "phaseHistoryLoaded": {
+    "message": "Historia załadowana"
+  },
+  "statusHistoryLoaded": {
+    "message": "Znaleziono {messages} wiadomości i {attachments} załączników."
+  },
+  "phaseDownloadingAttachments": {
+    "message": "Pobieranie dostępnych plików"
+  },
+  "statusAttachmentProgress": {
+    "message": "{current} z {total}: {filename}"
+  },
+  "phaseBuildingZip": {
+    "message": "Tworzenie ZIP"
+  },
+  "statusZipFiles": {
+    "message": "Plików w archiwum: {count}"
+  },
+  "statusZipCrc": {
+    "message": "Sprawdzanie {filename}"
+  },
+  "phaseReady": {
+    "message": "Archiwum gotowe"
+  },
+  "phaseError": {
+    "message": "Eksport zatrzymany"
+  },
+  "phaseCancelled": {
+    "message": "Eksport anulowany"
+  },
+  "statusCancelled": {
+    "message": "Nie utworzono częściowego ZIP. Uruchom eksport ponownie."
+  },
+  "cancelButton": {
+    "message": "Anuluj eksport"
+  },
+  "cancellingButton": {
+    "message": "Anulowanie…"
+  },
+  "downloadButton": {
+    "message": "Pobierz ZIP"
+  },
+  "closeButton": {
+    "message": "Zamknij"
+  },
+  "messagesLabel": {
+    "message": "wiadomości"
+  },
+  "attachmentsLabel": {
+    "message": "załączniki"
+  },
+  "downloadedLabel": {
+    "message": "pobrano"
+  },
+  "errorUnsupportedPage": {
+    "message": "Otwórz teams.cloud.microsoft lub teams.microsoft.com i wybierz czat."
+  },
+  "errorChatNotFound": {
+    "message": "Nie znaleziono wiadomości. Otwórz czat osobisty lub grupowy i spróbuj ponownie."
+  },
+  "errorScrollerNotFound": {
+    "message": "Nie znaleziono listy wiadomości. Upewnij się, że otwarty jest czat, a nie karta Pliki."
+  },
+  "errorAlreadyRunning": {
+    "message": "Na tej karcie trwa już eksport."
+  },
+  "errorCaptureLimit": {
+    "message": "Osiągnięto limit przed potwierdzeniem początku czatu. Nie utworzono częściowego ZIP."
+  },
+  "errorZipBuild": {
+    "message": "Nie udało się utworzyć ZIP. Zmniejsz załączniki lub spróbuj bez plików."
+  },
+  "errorDownload": {
+    "message": "Przeglądarka nie rozpoczęła pobierania. Użyj przycisku Pobierz ZIP w panelu postępu."
+  }
+}

@@ -1,0 +1,70 @@
+name: Bug report
+description: Report a reproducible export problem using non-sensitive test data.
+title: "bug: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not attach real chat archives, access tokens, signed file URLs, email addresses, or confidential screenshots.
+  - type: input
+    id: version
+    attributes:
+      label: Extension version
+      placeholder: 0.1.0
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and operating system
+      placeholder: Chrome 151 on macOS 15
+    validations:
+      required: true
+  - type: dropdown
+    id: domain
+    attributes:
+      label: Teams domain
+      options:
+        - teams.cloud.microsoft
+        - teams.microsoft.com
+    validations:
+      required: true
+  - type: dropdown
+    id: chat_type
+    attributes:
+      label: Conversation type
+      options:
+        - Personal chat
+        - Group chat
+        - Meeting chat
+        - Channel post (not currently supported)
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps with synthetic data
+      description: Include the phase, exact error text, and approximate message/file counts.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy confirmation
+      options:
+        - label: I removed real conversation content, identities, tokens, signed URLs, and confidential files.
+          required: true

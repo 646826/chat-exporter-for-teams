@@ -1,0 +1,41 @@
+name: Feature request
+description: Propose a focused improvement that preserves the local-first privacy model.
+title: "feat: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: User problem
+      description: Describe the workflow problem, not only the proposed implementation.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+    validations:
+      required: true
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Does this change permissions or data handling?
+      options:
+        - No
+        - Possibly
+        - Yes
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Project constraints
+      options:
+        - label: The request can work without telemetry or a developer backend.
+          required: true
+        - label: The request does not require bypassing Microsoft 365 authorization or policy.
+          required: true

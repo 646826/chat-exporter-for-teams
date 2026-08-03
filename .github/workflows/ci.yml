@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: Install project metadata
+        run: npm ci
+
+      - name: Resolve Chromium and Xvfb
+        shell: bash
+        run: |
+          set -euo pipefail
+          browser="$(command -v google-chrome-stable || command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          if [[ -z "${browser}" ]]; then
+            echo "No Chromium-compatible browser is installed on the runner." >&2
+            exit 1
+          fi
+          if ! command -v xvfb-run >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y xvfb
+          fi
+          echo "CHROMIUM_PATH=${browser}" >> "${GITHUB_ENV}"
+          "${browser}" --version
+
+      - name: Run complete verification
+        run: npm test
+
+      - name: Upload validated extension package
+        uses: actions/upload-artifact@v7
+        with:
+          name: chat-exporter-for-teams-${{ github.sha }}
+          path: chat-exporter-for-teams.zip
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload validated site preview
+        uses: actions/upload-artifact@v7
+        with:
+          name: chat-exporter-site-${{ github.sha }}
+          path: site-dist/
+          if-no-files-found: error
+          retention-days: 7
