@@ -142,6 +142,32 @@ function urlLooksLikeHtmlDocument(urlValue, nameHint) {
   return /\.html?(?:$|[?#])/i.test(String(urlValue || '')) || /\.html?$/i.test(String(nameHint || ''));
 }
 
+// Enforce the limit while reading, not only after allocating the entire file.
+// Fetch's linked AbortSignal still owns cancellation and the existing timeout.
+async function readAttachmentBlob(response, maxBytes) {
+  if (!response.body || typeof response.body.getReader !== 'function') return response.blob();
+  const reader = response.body.getReader();
+  const chunks = [];
+  let bytes = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      bytes += value.byteLength;
+      if (bytes > maxBytes) {
+        throw new ExportError(ERROR_CODES.ATTACHMENT_TOO_LARGE, `File exceeds limit (${formatBytes(bytes)})`);
+      }
+      chunks.push(value);
+    }
+    return new Blob(chunks, { type: response.headers.get('content-type') || '' });
+  } catch (error) {
+    await reader.cancel().catch(() => {});
+    throw error;
+  } finally {
+    reader.releaseLock();
+  }
+}
+
 export async function fetchAttachmentCandidate(candidate, signal, config) {
   const attempts = sharePointDownloadCandidates(candidate.url);
   if (!attempts.length) attempts.push(candidate.url);
@@ -153,8 +179,11 @@ export async function fetchAttachmentCandidate(candidate, signal, config) {
       const response = await fetch(attemptUrl, { credentials: 'include', redirect: 'follow', cache: 'no-store', signal: linked.signal });
       if (!response.ok) throw new ExportError(ERROR_CODES.ATTACHMENT_HTTP_ERROR, `HTTP ${response.status} ${response.statusText || ''}`.trim());
       const contentLength = Number(response.headers.get('content-length')) || 0;
-      if (contentLength > config.maxSingleAttachmentBytes) throw new ExportError(ERROR_CODES.ATTACHMENT_TOO_LARGE, `File exceeds limit (${formatBytes(contentLength)})`);
-      const blob = await response.blob();
+      if (contentLength > config.maxSingleAttachmentBytes) {
+        if (response.body) await response.body.cancel().catch(() => {});
+        throw new ExportError(ERROR_CODES.ATTACHMENT_TOO_LARGE, `File exceeds limit (${formatBytes(contentLength)})`);
+      }
+      const blob = await readAttachmentBlob(response, config.maxSingleAttachmentBytes);
       if (!blob.size) throw new ExportError(ERROR_CODES.ATTACHMENT_HTTP_ERROR, 'Empty response body');
       if (blob.size > config.maxSingleAttachmentBytes) throw new ExportError(ERROR_CODES.ATTACHMENT_TOO_LARGE, `File exceeds limit (${formatBytes(blob.size)})`);
       const mimeType = response.headers.get('content-type') || blob.type || 'application/octet-stream';
@@ -208,6 +237,7 @@ export async function downloadAttachments(attachments, ephemeralMap, overlay, si
         } else {
           downloaded = await fetchAttachmentCandidate(candidate, signal, config);
         }
+        if (downloaded.blob.size > config.maxSingleAttachmentBytes) throw new ExportError(ERROR_CODES.ATTACHMENT_TOO_LARGE, `File exceeds limit (${formatBytes(downloaded.blob.size)})`);
         if (totalBytes + downloaded.blob.size > config.maxTotalAttachmentBytes) throw new ExportError(ERROR_CODES.ATTACHMENT_TOTAL_LIMIT, `Total attachment limit would exceed ${formatBytes(config.maxTotalAttachmentBytes)}`);
         totalBytes += downloaded.blob.size;
         const filename = uniqueAttachmentFilename(downloaded.contentDispositionName || candidate.nameHint || filenameHintFromUrl(candidate.url) || 'attachment', downloaded.mimeType, index + 1, usedNames);
