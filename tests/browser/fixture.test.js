@@ -55,7 +55,7 @@ try {
   assert(sanitized.includes('rel="noreferrer noopener"'), 'sanitizer hardens external links');
 
   assert(findScrollContainer(document) === document.getElementById('fixture-scroller'), 'adapter selects the message scroller');
-  assert(window.__CHAT_EXPORTER_FOR_TEAMS__ && window.__CHAT_EXPORTER_FOR_TEAMS__.version === '0.2.0', 'built content bundle installs its idempotent global API');
+  assert(window.__CHAT_EXPORTER_FOR_TEAMS__ && window.__CHAT_EXPORTER_FOR_TEAMS__.version === '0.2.1', 'built content bundle installs its idempotent global API');
 
   output.dataset.testStatus = 'pass';
   output.textContent = `PASS ${assertions.length}`;
