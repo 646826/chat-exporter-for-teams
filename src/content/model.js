@@ -70,11 +70,12 @@ export function numericMessageTime(message) {
 }
 
 export function sortMessagesChronologically(messages) {
-  return [...(Array.isArray(messages) ? messages : [])]
-    .map((message, stableIndex) => ({ message, stableIndex }))
+  return (Array.isArray(messages) ? messages : [])
+    // Parse fallback ID timestamps once per message, not on every comparison.
+    .map((message, stableIndex) => ({ message, stableIndex, time: numericMessageTime(message) }))
     .sort((left, right) => {
-      const leftTime = numericMessageTime(left.message);
-      const rightTime = numericMessageTime(right.message);
+      const leftTime = left.time;
+      const rightTime = right.time;
       if (leftTime != null && rightTime != null && leftTime !== rightTime) return leftTime - rightTime;
       if (leftTime != null && rightTime == null) return -1;
       if (leftTime == null && rightTime != null) return 1;
