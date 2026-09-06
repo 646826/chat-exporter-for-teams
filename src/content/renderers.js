@@ -111,5 +111,61 @@ export function renderFailedAttachmentsHtml(records) {
 export function renderArchiveReadme({ title, sourceUrl, exportedAt, messages, records, extensionVersion }) {
   const downloaded = records.filter((record) => record.status === 'downloaded').length;
   const failed = records.length - downloaded;
-  return `Chat Exporter for Microsoft Teams — Files & ZIP\nVersion: ${extensionVersion || 'unknown'}\n\nChat: ${title}\nSource: ${sourceUrl}\nExported: ${exportedAt}\nMessages: ${messages.length}\nAttachments found: ${records.length}\nAttachments included: ${downloaded}\nNot downloaded automatically: ${failed}\n\nContents:\n- chat.html — readable offline transcript.\n- chat.json — structured data.\n- chat.csv — one row per message.\n- links.csv — ordinary links shared in messages.\n- attachments/ — files and images the browser could access.\n- attachments-report.csv — status of every attachment candidate.\n- failed-attachments.html — clickable links for unavailable items.\n\nLimitations:\nThe extension does not bypass Microsoft 365 permissions, CORS, Conditional Access, retention policies, or deleted files. Open failed-attachments.html while signed in to Microsoft 365 to recover files manually.\n\nMicrosoft Teams is a trademark of Microsoft Corporation. This independent extension is not affiliated with or endorsed by Microsoft.\n`;
+  return `Chat Exporter for Microsoft Teams — Files & ZIP\nVersion: ${extensionVersion || 'unknown'}\n\nChat: ${title}\nSource: ${sourceUrl}\nExported: ${exportedAt}\nMessages: ${messages.length}\nAttachments found: ${records.length}\nAttachments included: ${downloaded}\nNot downloaded automatically: ${failed}\n\nContents:\n- chat.html — readable offline transcript.\n- chat.md — Markdown transcript with literal text and local attachment links.\n- chat.json — structured data.\n- chat.csv — one row per message.\n- links.csv — ordinary links shared in messages.\n- attachments/ — files and images the browser could access.\n- attachments-report.csv — status of every attachment candidate.\n- failed-attachments.html — clickable links for unavailable items.\n\nLimitations:\nThe extension does not bypass Microsoft 365 permissions, CORS, Conditional Access, retention policies, or deleted files. Open failed-attachments.html while signed in to Microsoft 365 to recover files manually.\n\nMicrosoft Teams is a trademark of Microsoft Corporation. This independent extension is not affiliated with or endorsed by Microsoft.\n`;
+}
+
+// Markdown is a literal-text companion to the rich HTML transcript. Fencing
+// message bodies preserves code, indentation and HTML without interpreting it.
+export function renderChatMarkdown({ title, sourceUrl, exportedAt, messages, attachmentRecords } = {}) {
+  const safeMessages = (Array.isArray(messages) ? messages : []).filter(Boolean);
+  const records = new Map((Array.isArray(attachmentRecords) ? attachmentRecords : []).filter(Boolean).map((record) => [record.url, record]));
+  const output = [`# ${markdownLabel(title || 'Teams chat')}`, '', `Exported: ${markdownLabel(exportedAt || '')}`, `Messages: ${safeMessages.length}`];
+  if (sourceUrl) output.push(`Source: ${markdownLink(sourceUrl, sourceUrl)}`);
+  for (const [index, message] of safeMessages.entries()) {
+    const time = message.timestamp || message.timestampLabel || '';
+    output.push('', `## ${index + 1}. ${markdownLabel(message.author || 'Unknown')}${time ? ` — ${markdownLabel(time)}` : ''}`, '');
+    if (message.id) output.push(`Message ID: ${markdownLabel(message.id)}`, '');
+    const text = String(message.text || '');
+    if (text) {
+      let fenceLength = 3;
+      for (const match of text.matchAll(/`+/g)) fenceLength = Math.max(fenceLength, match[0].length + 1);
+      const fence = '`'.repeat(fenceLength);
+      output.push(`${fence}text\n${text}\n${fence}`);
+    } else output.push('[No text]');
+    for (const attachment of message.attachments || []) {
+      if (!attachment) continue;
+      const record = records.get(attachment.url);
+      const local = Boolean(record?.status === 'downloaded' && record.path);
+      const href = local ? archivePathToHref(record.path) : attachment.url;
+      const label = attachment.nameHint || record?.filename || 'attachment';
+      const status = record?.status || 'not downloaded';
+      output.push('', `- Attachment: ${markdownLink(label, href, local)} — ${markdownLabel(status)}${record?.error ? `: ${markdownLabel(record.error)}` : ''}`);
+    }
+    for (const link of message.links || []) {
+      if (link) output.push('', `- Link: ${markdownLink(link.text || link.url, link.url)}`);
+    }
+    if (message.reactions?.length) output.push('', `Reactions: ${message.reactions.map(markdownLabel).join(', ')}`);
+  }
+  if (!safeMessages.length) output.push('', 'No messages were captured.');
+  return `${output.join('\n')}\n`;
+}
+
+function markdownLabel(value) {
+  return String(value ?? '').replace(/[\r\n]+/g, ' ')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/[\\`*_\[\]~]/g, '\\$&');
+}
+
+function markdownLink(label, value, local = false) {
+  const text = markdownLabel(label);
+  let href = String(value || '');
+  if (!local) {
+    try {
+      const url = new URL(href);
+      if (!['https:', 'http:', 'mailto:', 'tel:'].includes(url.protocol)) return text;
+      href = url.href;
+    } catch { return text; }
+  }
+  href = href.replace(/[<>\s]/g, (character) => encodeURIComponent(character));
+  return href ? `[${text}](<${href}>)` : text;
 }

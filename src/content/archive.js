@@ -2,7 +2,7 @@ import { ERROR_CODES, ExportError } from '../shared/errors.js';
 import { buildZipBlob } from './zip.js';
 import {
   renderArchiveReadme, renderAttachmentReportCsv, renderChatCsv, renderChatHtml, renderChatJson,
-  renderFailedAttachmentsHtml, renderLinksCsv,
+  renderFailedAttachmentsHtml, renderLinksCsv, renderChatMarkdown,
 } from './renderers.js';
 import { throwIfAborted } from './utils.js';
 
@@ -10,6 +10,7 @@ export async function buildArchive({ title, sourceUrl, exportedAt, messages, att
   const date = new Date(exportedAt);
   const files = [
     { name: 'chat.html', data: renderChatHtml({ title, sourceUrl, exportedAt, messages, attachmentRecords }), type: 'text/html;charset=utf-8', date },
+    { name: 'chat.md', data: renderChatMarkdown({ title, sourceUrl, exportedAt, messages, attachmentRecords }), type: 'text/markdown;charset=utf-8', date },
     { name: 'chat.json', data: renderChatJson({ title, sourceUrl, exportedAt, messages, attachmentRecords }), type: 'application/json;charset=utf-8', date },
     { name: 'chat.csv', data: renderChatCsv(messages), type: 'text/csv;charset=utf-8', date },
     { name: 'links.csv', data: renderLinksCsv(messages), type: 'text/csv;charset=utf-8', date },

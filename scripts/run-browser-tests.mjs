@@ -3,6 +3,7 @@ import { spawn } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { inlineBrowserFixture } from './browser-fixture-html.mjs';
 
 await import(pathToFileURL(path.join(process.cwd(), 'scripts/build.mjs')).href + `?run=${Date.now()}`);
 
@@ -41,11 +42,10 @@ const chunks = [];
 for (const filename of browserSources) chunks.push(`\n/* ${filename} */\n${stripModuleSyntax(await readFile(path.join(root, filename), 'utf8'), filename)}\n`);
 const fixtureBundle = `(function browserFixture(){\n'use strict';\n${chunks.join('\n')}\n})();\n`;
 await writeFile(path.join(root, 'dist/browser-fixture.js'), fixtureBundle, 'utf8');
-const fixtureHtml = (await readFile(path.join(root, 'tests/browser/fixture.html'), 'utf8'))
-  .replace(
-    '<script nonce="browser-fixture" src="../../dist/browser-fixture.js"></script>',
-    `<script nonce="browser-fixture">${fixtureBundle.replace(/<\/script/gi, '<\\/script')}</script>`,
-  );
+const fixtureHtml = inlineBrowserFixture(
+  await readFile(path.join(root, 'tests/browser/fixture.html'), 'utf8'),
+  fixtureBundle,
+);
 
 const userDataDir = await mkdtemp(path.join(os.tmpdir(), 'chat-exporter-chromium-'));
 const chromium = process.env.CHROMIUM_PATH || '/usr/lib/chromium/chromium';
