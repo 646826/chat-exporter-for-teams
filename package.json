@@ -1,6 +1,6 @@
 {
   "name": "chat-exporter-for-teams",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Local-first Chromium extension that exports Microsoft Teams chats and accessible attachments to one ZIP.",
   "type": "module",
