@@ -7,6 +7,7 @@ import {
 import { throwIfAborted } from './utils.js';
 
 export async function buildArchive({ title, sourceUrl, exportedAt, messages, attachmentRecords, overlay, signal, extensionVersion }) {
+  throwIfAborted(signal);
   const date = new Date(exportedAt);
   const files = [
     { name: 'chat.html', data: renderChatHtml({ title, sourceUrl, exportedAt, messages, attachmentRecords }), type: 'text/html;charset=utf-8', date },
@@ -23,12 +24,14 @@ export async function buildArchive({ title, sourceUrl, exportedAt, messages, att
   try {
     return await buildZipBlob(files, {
       defaultDate: date,
+      signal,
       onProgress(progress) {
         throwIfAborted(signal);
         overlay.update({ phase: overlay.text('phaseBuildingZip'), status: overlay.text('statusZipCrc', { filename: progress.name }), progress: files.length ? progress.completed / files.length : 1 });
       },
     });
   } catch (error) {
+    throwIfAborted(signal);
     if (error && error.code === ERROR_CODES.ZIP_LIMIT_EXCEEDED) throw error;
     throw new ExportError(ERROR_CODES.ZIP_BUILD_FAILED, String(error && error.message || error), { cause: error });
   }
