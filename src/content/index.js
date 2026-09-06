@@ -2,7 +2,7 @@ import { ERROR_CODES, ExportError } from '../shared/errors.js';
 import { runTeamsChatExporter } from './controller.js';
 
 export const GLOBAL_API_KEY = '__CHAT_EXPORTER_FOR_TEAMS__';
-export const BUNDLE_VERSION = '0.2.0';
+export const BUNDLE_VERSION = '0.2.1';
 
 export function installGlobalApi(target = globalThis) {
   const existing = target[GLOBAL_API_KEY];
