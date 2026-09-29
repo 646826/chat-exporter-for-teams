@@ -15,6 +15,8 @@ export const DEFAULT_CONFIG = Object.freeze({
   topStableCycles: 5,
   maxScrollCycles: 5000,
   scrollStepRatio: 0.78,
+  attachmentRetries: 2,
+  attachmentRetryDelayMs: 500,
   attachmentConcurrency: 3,
   attachmentTimeoutMs: 45000,
   maxSingleAttachmentBytes: 2_000_000_000,
@@ -75,7 +77,9 @@ export async function runTeamsChatExporter(overrides = {}) {
     const datePart = exportedAt.slice(0, 10);
     const archiveName = sanitizeFilename(`teams-chat-${title}-${datePart}.zip`, `teams-chat-${datePart}.zip`, 180);
     overlay.update({ messages: captured.messages.length, attachments: attachments.length, bytes: downloadResult.totalBytes });
-    overlay.setDownload(zip, archiveName, config.autoDownloadZip);
+    const summary = { downloaded: 0, failed: 0, skipped: 0 };
+    for (const record of downloadResult.records) summary[record.status] += 1;
+    overlay.setDownload(zip, archiveName, config.autoDownloadZip, summary);
     return { archiveName, zip, messages: captured.messages, attachmentRecords: downloadResult.records.map(publicAttachmentRecord) };
   } catch (error) {
     if (error && (error.name === 'AbortError' || error.code === ERROR_CODES.EXPORT_CANCELLED)) {

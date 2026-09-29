@@ -15,6 +15,8 @@ export const CONTENT_STRING_KEYS = Object.freeze([
   'statusZipFiles',
   'statusZipCrc',
   'phaseReady',
+  'phaseReadyIncomplete',
+  'statusAttachmentSummary',
   'phaseError',
   'phaseCancelled',
   'statusCancelled',

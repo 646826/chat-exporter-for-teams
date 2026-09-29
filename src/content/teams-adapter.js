@@ -154,6 +154,17 @@ function closestContextText(element, stopAt) {
   return parts.filter(Boolean).join(' ');
 }
 
+// File semantics come from structural attributes, never from a message's
+// generic role=document or user-controlled title/aria-label text.
+function hasFileCardContext(element, stopAt) {
+  let node = element;
+  for (let depth = 0; node && node !== stopAt && depth < 6; depth += 1, node = node.parentElement) {
+    const structure = `${getAttributeSafe(node, 'data-tid')} ${getAttributeSafe(node, 'class')}`;
+    if (/(?:file|attachment|document)[-_]?(?:card|attachment|preview|name)|(?:media|image|video|recording)[-_]?card/i.test(structure)) return true;
+  }
+  return false;
+}
+
 function readElementDimensions(element) {
   return {
     width: Number(element && (element.naturalWidth || element.videoWidth || element.width || getAttributeSafe(element, 'width'))) || 0,
@@ -175,8 +186,8 @@ export function collectMessageUrls(messageNode, contentNode) {
     const candidate = {
       url,
       kind,
-      download: Boolean(getAttributeSafe(element, 'download')),
-      isFileCard: /(?:file|attachment|document|media-card|image-card|video-card|recording)/i.test(context),
+      download: Boolean(element && typeof element.hasAttribute === 'function' && element.hasAttribute('download')),
+      isFileCard: hasFileCardContext(element, messageNode && messageNode.parentElement),
       isMedia: /^(?:image|video|audio|source|poster)$/i.test(kind),
       dataTid: `${getAttributeSafe(element, 'data-tid')} ${context}`.trim(),
       className: getAttributeSafe(element, 'class'),
@@ -207,7 +218,7 @@ export function collectMessageUrls(messageNode, contentNode) {
   for (const element of querySelectorAllSafe(scope, dataAttributes.map((name) => `[${name}]`).join(','))) {
     for (const name of dataAttributes) {
       const value = getAttributeSafe(element, name);
-      if (value) pushCandidate(element, value, /image/i.test(name) ? 'image' : 'data-url');
+      if (value) pushCandidate(element, value, /image/i.test(name) ? 'image' : 'data-url', { isAttachment: name === 'data-download-url' || name === 'data-file-url' });
     }
   }
   return { attachments: dedupeItemsByUrl(attachments), links: dedupeItemsByUrl(links) };

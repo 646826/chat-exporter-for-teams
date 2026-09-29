@@ -172,5 +172,11 @@
   },
   "errorDownload": {
     "message": "Der Browser konnte den Download nicht starten. Nutze die Schaltfläche ZIP herunterladen im Fortschrittsfenster."
+  },
+  "phaseReadyIncomplete": {
+    "message": "Archiv fertig — Dateien fehlen"
+  },
+  "statusAttachmentSummary": {
+    "message": "Heruntergeladen: {downloaded} · Fehlgeschlagen: {failed} · Übersprungen: {skipped}"
   }
 }

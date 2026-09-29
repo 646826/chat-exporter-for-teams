@@ -139,7 +139,15 @@ jobs:
 
       - name: Report missing store credentials
         if: ${{ steps.release.outputs.should_upload == 'true' && steps.release.outputs.auth_mode == 'none' }}
-        run: echo "Chrome Web Store credentials are not configured. The verified ZIP is available as a workflow artifact; no tag or GitHub Release will be created."
+        env:
+          CWS_PUBLISH_TYPE: ${{ steps.release.outputs.publish_type }}
+        shell: bash
+        run: |
+          echo "Chrome Web Store credentials are not configured. The verified ZIP is available as a workflow artifact; no upload or publication occurred."
+          if [[ "${CWS_PUBLISH_TYPE}" != "UPLOAD_ONLY" ]]; then
+            echo "::error::Publication was requested but Chrome Web Store authorization is missing."
+            exit 1
+          fi
 
       - id: auth_wif
         name: Authenticate with Workload Identity Federation

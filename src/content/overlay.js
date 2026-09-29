@@ -11,7 +11,7 @@ const DEFAULT_STRINGS = Object.freeze({
   statusHistoryLoaded: '{messages} messages and {attachments} attachment candidates found.',
   phaseDownloadingAttachments: 'Downloading accessible files', statusAttachmentProgress: '{current} of {total}: {filename}',
   phaseBuildingZip: 'Building ZIP', statusZipFiles: 'Files in archive: {count}', statusZipCrc: 'Checking {filename}',
-  phaseReady: 'Archive ready', phaseError: 'Export stopped', phaseCancelled: 'Export cancelled',
+  phaseReady: 'Archive ready', phaseReadyIncomplete: 'Archive ready — files missing', statusAttachmentSummary: '{downloaded} downloaded · {failed} failed · {skipped} skipped', phaseError: 'Export stopped', phaseCancelled: 'Export cancelled',
   statusCancelled: 'No partial ZIP was created. Start the export again to retry.', cancelButton: 'Cancel export',
   cancellingButton: 'Cancelling…', downloadButton: 'Download ZIP', closeButton: 'Close', messagesLabel: 'messages',
   attachmentsLabel: 'attachments', downloadedLabel: 'downloaded',
@@ -192,16 +192,17 @@ export function createProgressOverlay(onCancel, localizedStrings = {}, doc = doc
       downloadButton.hidden = true;
       closeButton.hidden = false;
     },
-    setDownload(blob, filename, autoDownload) {
+    setDownload(blob, filename, autoDownload, summary = {}) {
       cleanup();
       objectUrl = URL.createObjectURL(blob);
       downloadName = filename;
       downloadButton.hidden = false;
       closeButton.hidden = false;
       cancelButton.hidden = true;
-      phase.textContent = text('phaseReady');
-      phase.className = 'phase ok';
-      status.textContent = `${filename} · ${formatBytes(blob.size)}`;
+      const incomplete = (summary.failed || 0) + (summary.skipped || 0) > 0;
+      phase.textContent = text(incomplete ? 'phaseReadyIncomplete' : 'phaseReady');
+      phase.className = incomplete ? 'phase error' : 'phase ok';
+      status.textContent = `${filename} · ${formatBytes(blob.size)}${Number.isFinite(summary.downloaded) ? ' — ' + text('statusAttachmentSummary', summary) : ''}`;
       bar.classList.add('determinate');
       bar.setAttribute('aria-valuenow', '100');
       barFill.style.width = '100%';

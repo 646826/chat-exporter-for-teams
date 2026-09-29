@@ -1,3 +1,4 @@
+import { fetchWithRetry } from './retry.js';
 import { ERROR_CODES, ExportError } from '../shared/errors.js';
 import { classifyAttachmentUrl, filenameHintFromUrl, sharePointDownloadCandidates } from '../shared/urls.js';
 import { formatBytes, getAttributeSafe, sanitizeFilename, throwIfAborted } from './utils.js';
@@ -97,28 +98,40 @@ export function uniqueAttachmentFilename(nameHint, mimeType, index, usedNames = 
   return candidate;
 }
 
-export async function prefetchEphemeralAttachments(messages, ephemeralMap, signal, enabled = true) {
+const ephemeralByteTotals = new WeakMap();
+
+export async function prefetchEphemeralAttachments(messages, ephemeralMap, signal, enabled = true, options = {}) {
   if (!enabled) return;
-  const promises = [];
+  const config = { attachmentTimeoutMs: 45000, attachmentConcurrency: 3, maxSingleAttachmentBytes: 2_000_000_000, maxTotalAttachmentBytes: 3_500_000_000, ...options };
+  const queue = [];
   for (const message of messages) {
-    for (const attachment of message.attachments || []) {
-      if (!/^(?:blob|data):/i.test(attachment.url) || ephemeralMap.has(attachment.url)) continue;
-      const promise = (async () => {
-        try {
-          throwIfAborted(signal);
-          const response = await fetch(attachment.url, { credentials: 'include', signal });
-          if (!response.ok && response.status !== 0) throw new ExportError(ERROR_CODES.ATTACHMENT_HTTP_ERROR, `HTTP ${response.status}`);
-          const blob = await response.blob();
-          return { blob, mimeType: blob.type || '', error: '' };
-        } catch (error) {
-          return { blob: null, mimeType: '', error: String(error && error.message || error) };
-        }
-      })();
-      ephemeralMap.set(attachment.url, promise);
-      promises.push(promise);
+    for (const candidate of message.attachments || []) {
+      if (!/^(?:blob|data):/i.test(candidate.url) || ephemeralMap.has(candidate.url)) continue;
+      let resolve;
+      const promise = new Promise((done) => { resolve = done; });
+      ephemeralMap.set(candidate.url, promise);
+      queue.push({ candidate, resolve });
     }
   }
-  if (promises.length) await Promise.allSettled(promises);
+  let next = 0;
+  async function prefetchWorker() {
+    while (next < queue.length) {
+      throwIfAborted(signal);
+      const task = queue[next++];
+      try {
+        const downloaded = await fetchAttachmentCandidate(task.candidate, signal, config);
+        const used = ephemeralByteTotals.get(ephemeralMap) || 0;
+        if (used + downloaded.blob.size > config.maxTotalAttachmentBytes) throw new ExportError(ERROR_CODES.ATTACHMENT_TOTAL_LIMIT, 'Ephemeral media cache reached the total attachment limit');
+        ephemeralByteTotals.set(ephemeralMap, used + downloaded.blob.size);
+        task.resolve({ blob: downloaded.blob, mimeType: downloaded.mimeType, error: '', errorCode: '' });
+      } catch (error) {
+        task.resolve({ blob: null, mimeType: '', error: String(error?.message || error), errorCode: error?.code || ERROR_CODES.ATTACHMENT_HTTP_ERROR });
+        throwIfAborted(signal);
+      }
+    }
+  }
+  const workers = Math.min(queue.length, Math.max(1, Math.min(8, Number(config.attachmentConcurrency) || 3)));
+  await Promise.all(Array.from({ length: workers }, () => prefetchWorker()));
 }
 
 function createLinkedTimeoutSignal(parentSignal, timeoutMs) {
@@ -144,14 +157,18 @@ function urlLooksLikeHtmlDocument(urlValue, nameHint) {
 
 // Enforce the limit while reading, not only after allocating the entire file.
 // Fetch's linked AbortSignal still owns cancellation and the existing timeout.
-async function readAttachmentBlob(response, maxBytes) {
+async function readAttachmentBlob(response, maxBytes, signal) {
   if (!response.body || typeof response.body.getReader !== 'function') return response.blob();
   const reader = response.body.getReader();
+  const onReadAbort = () => { reader.cancel(signal.reason).catch(() => {}); };
+  if (signal) signal.addEventListener('abort', onReadAbort, { once: true });
   const chunks = [];
   let bytes = 0;
   try {
     while (true) {
+      throwIfAborted(signal);
       const { done, value } = await reader.read();
+      throwIfAborted(signal);
       if (done) break;
       bytes += value.byteLength;
       if (bytes > maxBytes) {
@@ -164,6 +181,7 @@ async function readAttachmentBlob(response, maxBytes) {
     await reader.cancel().catch(() => {});
     throw error;
   } finally {
+    if (signal) signal.removeEventListener('abort', onReadAbort);
     reader.releaseLock();
   }
 }
@@ -172,18 +190,19 @@ export async function fetchAttachmentCandidate(candidate, signal, config) {
   const attempts = sharePointDownloadCandidates(candidate.url);
   if (!attempts.length) attempts.push(candidate.url);
   const errors = [];
+  const requestAttempts = [];
   for (const attemptUrl of attempts) {
     throwIfAborted(signal);
     const linked = createLinkedTimeoutSignal(signal, config.attachmentTimeoutMs);
     try {
-      const response = await fetch(attemptUrl, { credentials: 'include', redirect: 'follow', cache: 'no-store', signal: linked.signal });
+      const response = await fetchWithRetry(attemptUrl, { credentials: 'include', redirect: 'follow', cache: 'no-store', signal: linked.signal }, config, requestAttempts);
       if (!response.ok) throw new ExportError(ERROR_CODES.ATTACHMENT_HTTP_ERROR, `HTTP ${response.status} ${response.statusText || ''}`.trim());
       const contentLength = Number(response.headers.get('content-length')) || 0;
       if (contentLength > config.maxSingleAttachmentBytes) {
         if (response.body) await response.body.cancel().catch(() => {});
         throw new ExportError(ERROR_CODES.ATTACHMENT_TOO_LARGE, `File exceeds limit (${formatBytes(contentLength)})`);
       }
-      const blob = await readAttachmentBlob(response, config.maxSingleAttachmentBytes);
+      const blob = await readAttachmentBlob(response, config.maxSingleAttachmentBytes, linked.signal);
       if (!blob.size) throw new ExportError(ERROR_CODES.ATTACHMENT_HTTP_ERROR, 'Empty response body');
       if (blob.size > config.maxSingleAttachmentBytes) throw new ExportError(ERROR_CODES.ATTACHMENT_TOO_LARGE, `File exceeds limit (${formatBytes(blob.size)})`);
       const mimeType = response.headers.get('content-type') || blob.type || 'application/octet-stream';
@@ -195,7 +214,7 @@ export async function fetchAttachmentCandidate(candidate, signal, config) {
         mimeType,
         resolvedUrl: response.url || attemptUrl,
         contentDispositionName: parseContentDispositionFilename(response.headers.get('content-disposition')),
-        attempts: [...errors.map((entry) => entry.url), attemptUrl],
+        attempts: [...requestAttempts],
       };
     } catch (error) {
       if (signal && signal.aborted) throw signal.reason || error;
@@ -207,8 +226,14 @@ export async function fetchAttachmentCandidate(candidate, signal, config) {
   }
   const last = errors.at(-1) || {};
   const error = new ExportError(last.code || ERROR_CODES.ATTACHMENT_HTTP_ERROR, errors.map((entry) => `${entry.url}: ${entry.message}`).join(' | ') || 'Download failed', { attempts: errors });
-  error.attempts = errors;
+  error.attempts = requestAttempts;
   throw error;
+}
+
+function attachmentDisplayName(candidate) {
+  const hint = String(candidate.nameHint || '');
+  const urlName = filenameHintFromUrl(candidate.url);
+  return /^(?:link(?:\s|$)|url preview|shared(?:\s|$))/i.test(hint) && urlName ? urlName : hint || urlName || 'attachment';
 }
 
 export async function downloadAttachments(attachments, ephemeralMap, overlay, signal, config) {
@@ -226,13 +251,13 @@ export async function downloadAttachments(attachments, ephemeralMap, overlay, si
       nextIndex += 1;
       if (index >= safeAttachments.length) return;
       const candidate = safeAttachments[index];
-      const baseRecord = { url: candidate.url, resolvedUrl: '', status: 'failed', filename: '', path: '', bytes: 0, mimeType: '', error: '', messageIds: candidate.messageIds || [], attempts: [] };
+      const baseRecord = { url: candidate.url, resolvedUrl: '', status: 'failed', filename: '', path: '', bytes: 0, mimeType: '', error: '', errorCode: '', messageIds: candidate.messageIds || [], attempts: [] };
       try {
         if (!config.includeAttachments) throw new ExportError('DOWNLOAD_DISABLED', 'Attachment downloads were disabled by the user.');
         let downloaded;
         if (ephemeralMap.has(candidate.url)) {
           const prefetched = await ephemeralMap.get(candidate.url);
-          if (!prefetched || !prefetched.blob) throw new ExportError(ERROR_CODES.ATTACHMENT_HTTP_ERROR, prefetched && prefetched.error || 'Ephemeral media URL expired');
+          if (!prefetched || !prefetched.blob) throw new ExportError(prefetched?.errorCode || ERROR_CODES.ATTACHMENT_HTTP_ERROR, prefetched && prefetched.error || 'Ephemeral media URL expired');
           downloaded = { blob: prefetched.blob, mimeType: prefetched.mimeType || prefetched.blob.type || 'application/octet-stream', resolvedUrl: candidate.url, contentDispositionName: '', attempts: [candidate.url] };
         } else {
           downloaded = await fetchAttachmentCandidate(candidate, signal, config);
@@ -240,13 +265,13 @@ export async function downloadAttachments(attachments, ephemeralMap, overlay, si
         if (downloaded.blob.size > config.maxSingleAttachmentBytes) throw new ExportError(ERROR_CODES.ATTACHMENT_TOO_LARGE, `File exceeds limit (${formatBytes(downloaded.blob.size)})`);
         if (totalBytes + downloaded.blob.size > config.maxTotalAttachmentBytes) throw new ExportError(ERROR_CODES.ATTACHMENT_TOTAL_LIMIT, `Total attachment limit would exceed ${formatBytes(config.maxTotalAttachmentBytes)}`);
         totalBytes += downloaded.blob.size;
-        const filename = uniqueAttachmentFilename(downloaded.contentDispositionName || candidate.nameHint || filenameHintFromUrl(candidate.url) || 'attachment', downloaded.mimeType, index + 1, usedNames);
+        const filename = uniqueAttachmentFilename(downloaded.contentDispositionName || attachmentDisplayName(candidate), downloaded.mimeType, index + 1, usedNames);
         records[index] = { ...baseRecord, status: 'downloaded', filename, path: `attachments/${filename}`, bytes: downloaded.blob.size, mimeType: downloaded.mimeType, resolvedUrl: downloaded.resolvedUrl, attempts: downloaded.attempts, blob: downloaded.blob };
       } catch (error) {
         if (signal && signal.aborted) throw signal.reason || error;
         const status = error && ['DOWNLOAD_DISABLED', ERROR_CODES.ATTACHMENT_TOO_LARGE, ERROR_CODES.ATTACHMENT_TOTAL_LIMIT].includes(error.code) ? 'skipped' : 'failed';
-        const filename = uniqueAttachmentFilename(candidate.nameHint || filenameHintFromUrl(candidate.url) || 'attachment', '', index + 1, usedNames);
-        records[index] = { ...baseRecord, status, filename, error: String(error && error.message || error), attempts: error && (error.attempts || error.details && error.details.attempts) || [] };
+        const filename = uniqueAttachmentFilename(attachmentDisplayName(candidate), '', index + 1, usedNames);
+        records[index] = { ...baseRecord, status, filename, errorCode: error?.code || ERROR_CODES.ATTACHMENT_HTTP_ERROR, error: String(error && error.message || error), attempts: error && (error.attempts || error.details && error.details.attempts) || [] };
       }
       completed += 1;
       overlay.update({
