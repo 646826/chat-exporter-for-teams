@@ -172,5 +172,11 @@
   },
   "errorDownload": {
     "message": "El navegador no pudo iniciar la descarga. Usa el botón Descargar ZIP del panel."
+  },
+  "phaseReadyIncomplete": {
+    "message": "Archivo listo — faltan archivos"
+  },
+  "statusAttachmentSummary": {
+    "message": "Descargados: {downloaded} · Fallidos: {failed} · Omitidos: {skipped}"
   }
 }

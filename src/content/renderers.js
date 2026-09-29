@@ -48,6 +48,7 @@ export function renderAttachmentReportCsv(records) {
     { key: 'status', label: 'Status' }, { key: 'filename', label: 'Filename' }, { key: 'path', label: 'Archive path' },
     { key: 'bytes', label: 'Bytes' }, { key: 'mimeType', label: 'MIME type' }, { key: 'url', label: 'Original URL' },
     { key: 'resolvedUrl', label: 'Resolved URL' }, { key: 'error', label: 'Error' },
+    { key: 'errorCode', label: 'Error code' }, { label: 'Attempts', value: (record) => JSON.stringify(record.attempts || []) },
     { label: 'Message IDs', value: (record) => (record.messageIds || []).join(' ') },
   ]);
 }

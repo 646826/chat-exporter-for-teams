@@ -1,3 +1,4 @@
+import { browserLaunch } from './lib/browser-launch.mjs';
 import { readFile, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import os from 'node:os';
@@ -15,6 +16,7 @@ const browserSources = [
   'src/content/utils.js',
   'src/content/zip.js',
   'src/content/model.js',
+  'src/content/retry.js',
   'src/content/attachments.js',
   'src/content/teams-adapter.js',
   'src/content/overlay.js',
@@ -48,14 +50,11 @@ const fixtureHtml = inlineBrowserFixture(
 );
 
 const userDataDir = await mkdtemp(path.join(os.tmpdir(), 'chat-exporter-chromium-'));
-const chromium = process.env.CHROMIUM_PATH || '/usr/lib/chromium/chromium';
-const args = [
-  '-a', chromium, '--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage', '--disable-background-networking',
-  '--disable-component-update', '--disable-default-apps', '--disable-sync', '--mute-audio', '--no-first-run',
-  '--no-default-browser-check', '--remote-debugging-port=0', `--user-data-dir=${userDataDir}`, 'about:blank',
-];
-const child = spawn('xvfb-run', args, { detached: true, stdio: ['ignore', 'ignore', 'pipe'] });
+const launch = browserLaunch(process.platform, process.env, userDataDir);
+const child = spawn(launch.command, launch.args, { detached: true, stdio: ['ignore', 'ignore', 'pipe'] });
 let chromiumLog = '';
+let launchError;
+child.on('error', (error) => { launchError = error; });
 child.stderr.setEncoding('utf8');
 child.stderr.on('data', (chunk) => { chromiumLog += chunk; });
 
@@ -64,6 +63,8 @@ function delay(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 async function waitForDevToolsPort() {
   const filePath = path.join(userDataDir, 'DevToolsActivePort');
   for (let attempt = 0; attempt < 100; attempt += 1) {
+    if (launchError) throw launchError;
+    if (child.exitCode != null) throw new Error(`Chromium exited (${child.exitCode}): ${chromiumLog}`);
     try {
       const [port, browserPath] = (await readFile(filePath, 'utf8')).trim().split(/\r?\n/);
       if (port && browserPath) return { port: Number(port), browserPath };

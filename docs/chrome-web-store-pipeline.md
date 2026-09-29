@@ -159,3 +159,7 @@ Do not place credentials in `.env` files committed to the repository.
 - **Authentication failure:** verify the publisher ID, extension ID, service-account access, WIF audience/provider, and API scope.
 
 Never force-create the release tag to make a failed pipeline look complete.
+
+## Explicit publication without credentials (0.2.2)
+
+A manual `DEFAULT_PUBLISH` or `STAGED_PUBLISH` request now fails at the missing-credentials check. A build-only `UPLOAD_ONLY` run can still produce a verified workflow artifact, but it logs that no upload or publication occurred. Never interpret its green build status as store delivery.

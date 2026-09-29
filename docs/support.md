@@ -92,3 +92,7 @@ Include:
 Never include access tokens, signed attachment URLs, real chat archives, names, email addresses, or confidential screenshots.
 
 Security or privacy reports should be sent privately to `646826@gmail.com`.
+
+## Missing attachments in 0.2.2
+
+The final dialog lists downloaded, failed and skipped counts. Open `attachments-report.csv` for the original URL, error code and request attempts. Ordinary links are in `links.csv`; their preservation does not mean the linked website works offline. Temporary errors retry automatically. Authorization, CORS, expired links and deleted files can remain unavailable; 0.2.2 resolves known SharePoint viewer URLs but does not add a privileged cross-origin transport.

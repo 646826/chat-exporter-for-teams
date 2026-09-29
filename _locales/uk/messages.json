@@ -172,5 +172,11 @@
   },
   "errorDownload": {
     "message": "Браузер не зміг почати завантаження ZIP. Натисніть «Завантажити ZIP» на панелі прогресу."
+  },
+  "phaseReadyIncomplete": {
+    "message": "Архів готовий — завантажено не всі файли"
+  },
+  "statusAttachmentSummary": {
+    "message": "Завантажено: {downloaded} · Помилок: {failed} · Пропущено: {skipped}"
   }
 }

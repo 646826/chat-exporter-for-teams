@@ -172,5 +172,11 @@
   },
   "errorDownload": {
     "message": "Przeglądarka nie rozpoczęła pobierania. Użyj przycisku Pobierz ZIP w panelu postępu."
+  },
+  "phaseReadyIncomplete": {
+    "message": "Archiwum gotowe — brakuje plików"
+  },
+  "statusAttachmentSummary": {
+    "message": "Pobrano: {downloaded} · Błędy: {failed} · Pominięto: {skipped}"
   }
 }

@@ -35,7 +35,7 @@ export async function captureChatHistory(scroller, overlay, signal, config) {
       captureOrder += batchMessages.length;
       let newlyCaptured = 0;
       for (const message of batchMessages) if (mergeCapturedMessage(messageMap, message)) newlyCaptured += 1;
-      await prefetchEphemeralAttachments(batchMessages, ephemeralMap, signal, config.includeAttachments);
+      await prefetchEphemeralAttachments(batchMessages, ephemeralMap, signal, config.includeAttachments, config);
 
       const top = Math.max(0, Number(scroller.scrollTop) || 0);
       const height = Math.max(0, Number(scroller.scrollHeight) || 0);

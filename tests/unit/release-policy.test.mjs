@@ -62,3 +62,19 @@ test('manual staged publishing remains an explicit choice', () => {
   const out = resolveRelease({ event: 'workflow_dispatch', requested: 'STAGED_PUBLISH' });
   assert.equal(out.publish_type, 'STAGED_PUBLISH'); assert.equal(out.skip_review, 'false');
 });
+
+test('explicit publication without credentials fails instead of reporting a green delivery', () => {
+  const missing = workflow.split('      - name: Report missing store credentials\n')[1]?.split('\n      - ')[0];
+  assert.ok(missing);
+  const marker = '        run: |\n';
+  const command = missing.includes(marker)
+    ? missing.split(marker)[1].split('\n').map(line => line.startsWith('          ') ? line.slice(10) : line).join('\n')
+    : missing.match(/        run: (.*)/)?.[1];
+  for (const mode of ['DEFAULT_PUBLISH','STAGED_PUBLISH']) {
+    const result = spawnSync('bash',['-c',command],{env:{...process.env,CWS_PUBLISH_TYPE:mode},encoding:'utf8'});
+    assert.equal(result.status,1,`${mode} must not succeed without store authorization`);
+  }
+  const preparation = spawnSync('bash',['-c',command],{env:{...process.env,CWS_PUBLISH_TYPE:'UPLOAD_ONLY'},encoding:'utf8'});
+  assert.equal(preparation.status,0);
+  assert.match(preparation.stdout,/not configured|no.*publish|not.*publish/i);
+});

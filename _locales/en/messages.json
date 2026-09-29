@@ -172,5 +172,11 @@
   },
   "errorDownload": {
     "message": "The browser could not start the ZIP download. Use the Download ZIP button in the progress panel."
+  },
+  "phaseReadyIncomplete": {
+    "message": "Archive ready — files missing"
+  },
+  "statusAttachmentSummary": {
+    "message": "{downloaded} downloaded · {failed} failed · {skipped} skipped"
   }
 }

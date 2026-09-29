@@ -6,3 +6,6 @@ release-evidence.json
 cws-release.log
 gha-creds-*.json
 .DS_Store
+
+# Local code-review index metadata
+.serena/

@@ -70,7 +70,7 @@ export function classifyAttachmentUrl(rawUrl, hints = {}) {
     || host.endsWith('.skype.com')
   ) return 'attachment';
 
-  const fileExtension = /\.(?:7z|aac|avi|bmp|csv|doc|docm|docx|eml|epub|gif|gz|heic|heif|htm|html|ics|jpeg|jpg|json|m4a|m4v|md|mkv|mov|mp3|mp4|mpeg|mpg|msg|odp|ods|odt|ogg|ogv|pdf|png|ppt|pptm|pptx|rar|rtf|svg|tar|tif|tiff|tsv|txt|wav|webm|webp|xls|xlsb|xlsm|xlsx|xml|yaml|yml|zip)(?:$|[?#&\s])/i;
+  const fileExtension = /\.(?:7z|aac|avi|bmp|csv|doc|docm|docx|eml|epub|gif|gz|heic|heif|ics|jpeg|jpg|json|m4a|m4v|md|mkv|mov|mp3|mp4|mpeg|mpg|msg|odp|ods|odt|ogg|ogv|pdf|png|ppt|pptm|pptx|rar|rtf|svg|tar|tif|tiff|tsv|txt|wav|webm|webp|xls|xlsb|xlsm|xlsx|xml|yaml|yml|zip)(?:$|[?#&\s])/i;
   if (fileExtension.test(`${url.pathname}${url.search}`) || fileExtension.test(pathAndQuery)) return 'attachment';
   return 'link';
 }
@@ -87,6 +87,19 @@ export function sharePointDownloadCandidates(rawUrl) {
   }
   const host = normalizeHostname(parsed.hostname);
   if (!(host.endsWith('.sharepoint.com') || host === 'onedrive.live.com' || host === '1drv.ms')) return result;
+  if (/\/_layouts\/15\/download\.aspx$/i.test(parsed.pathname)) return result;
+  if (host.endsWith('.sharepoint.com')) {
+    const path = parsed.pathname.replace(/^\/:[a-z]:\/r(?=\/)/i, '');
+    const viewer = path.match(/^(.*)\/_layouts\/15\/(?:Doc|WopiFrame)\.aspx$/i);
+    const sourceDoc = parsed.searchParams.get('sourcedoc') || '';
+    const guid = sourceDoc.replace(/^\{([0-9a-f-]+)\}$/i, '$1');
+    if (viewer && /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(guid)) {
+      const direct = new URL(`${viewer[1]}/_layouts/15/download.aspx`, parsed.origin);
+      direct.searchParams.set('UniqueId', guid);
+      result.unshift(direct.href);
+    }
+  }
+
 
   for (const entries of [
     [['action', 'download']],

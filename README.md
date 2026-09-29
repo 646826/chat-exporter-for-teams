@@ -152,3 +152,9 @@ Microsoft and Microsoft Teams are trademarks of the Microsoft group of companies
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+## 0.2.2 attachment reliability
+
+Ordinary website/link-preview and HTML game-page links are preserved in `links.csv` and the transcript, not counted as downloadable files without file semantics. Actual file cards, explicit downloads and media are still collected. Temporary network failures retry automatically within a bounded deadline; temporary media capture uses a bounded worker pool and size checks. Completion explicitly reports downloaded, failed and skipped files.
+
+See [0.2.2 release notes](docs/releases/0.2.2.md) for exact scope. SharePoint viewer URL resolution is covered by regression tests. A privileged cross-origin transport remains deferred in issue #8; requests still use the signed-in page context. This release does not guarantee that every Microsoft 365 file can be fetched and does not change permissions.

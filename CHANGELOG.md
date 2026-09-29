@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.2 — 2026-09-29
+
+- Fix false attachment detection for ordinary links and generic document containers.
+- Add bounded transient retries, stream timeout cancellation and bounded ephemeral-media capture.
+- Improve attachment filenames and explicit incomplete-archive diagnostics in eight languages.
+- Make browser verification portable to macOS; fail explicit Store publication when authorization is absent.
+- Add site-scoped SharePoint viewer download candidates and preserve original/signed URLs. Privileged cross-origin transport remains deferred; no new permissions.
+- Resolve the independent-review regressions, including zero-byte files, stuck cancellation and diagnostic history.
+- Use one deadline per file and test real HTTP-to-ZIP byte integrity.
+
+
 All notable changes to this project are documented here. The format follows Keep a Changelog, and releases use Semantic Versioning.
 
 ## [Unreleased]

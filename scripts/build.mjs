@@ -11,6 +11,7 @@ const bundleSources = [
   'src/content/utils.js',
   'src/content/zip.js',
   'src/content/model.js',
+  'src/content/retry.js',
   'src/content/attachments.js',
   'src/content/teams-adapter.js',
   'src/content/overlay.js',

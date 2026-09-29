@@ -172,5 +172,11 @@
   },
   "errorDownload": {
     "message": "Le navigateur n’a pas pu lancer le téléchargement. Utilisez le bouton Télécharger le ZIP du panneau."
+  },
+  "phaseReadyIncomplete": {
+    "message": "Archive prête — fichiers manquants"
+  },
+  "statusAttachmentSummary": {
+    "message": "Téléchargés : {downloaded} · Échecs : {failed} · Ignorés : {skipped}"
   }
 }
