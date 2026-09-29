@@ -199,8 +199,15 @@ export async function fetchAttachmentCandidate(candidate, signal, config) {
     for (const attemptUrl of attempts) {
       throwIfAborted(signal);
       if (linked.signal.aborted) break;
+      // A generated viewer-download candidate is speculative. Reserve at least
+      // two thirds of the overall deadline for the original URL and fallbacks.
+      // Original/signed download URLs retain the full shared file deadline.
+      const speculative = attemptUrl === attempts[0] && attemptUrl !== String(candidate.url).trim();
+      const request = speculative
+        ? createLinkedTimeoutSignal(linked.signal, Math.max(1, Math.min(15000, config.attachmentTimeoutMs / 3)))
+        : linked;
       try {
-        const response = await fetchWithRetry(attemptUrl, { credentials: 'include', redirect: 'follow', cache: 'no-store', signal: linked.signal }, config, requestAttempts);
+        const response = await fetchWithRetry(attemptUrl, { credentials: 'include', redirect: 'follow', cache: 'no-store', signal: request.signal }, config, requestAttempts);
         if (!response.ok) {
           discardResponseBody(response.body);
           throw new ExportError(ERROR_CODES.ATTACHMENT_HTTP_ERROR, `HTTP ${response.status} ${response.statusText || ''}`.trim());
@@ -216,16 +223,18 @@ export async function fetchAttachmentCandidate(candidate, signal, config) {
           discardResponseBody(response.body);
           throw new ExportError(ERROR_CODES.ATTACHMENT_TOO_LARGE, `File exceeds limit (${formatBytes(contentLength)})`);
         }
-        const blob = await readAttachmentBlob(response, config.maxSingleAttachmentBytes, linked.signal);
+        const blob = await readAttachmentBlob(response, config.maxSingleAttachmentBytes, request.signal);
         const explicitEmptyFile = response.status === 200 && contentDispositionName && /^attachment\b/i.test(response.headers.get('content-disposition') || '');
         if (!blob.size && !ephemeral && !explicitEmptyFile) throw new ExportError(ERROR_CODES.ATTACHMENT_HTTP_ERROR, 'Empty response body');
         if (blob.size > config.maxSingleAttachmentBytes) throw new ExportError(ERROR_CODES.ATTACHMENT_TOO_LARGE, `File exceeds limit (${formatBytes(blob.size)})`);
         return { blob, mimeType, resolvedUrl: response.url || attemptUrl, contentDispositionName, attempts: [...requestAttempts] };
       } catch (error) {
         if (signal && signal.aborted) throw signal.reason || error;
-        const normalized = linked.signal.aborted && linked.signal.reason ? linked.signal.reason : error;
+        const normalized = request.signal.aborted && request.signal.reason ? request.signal.reason : error;
         errors.push({ url: attemptUrl, code: normalized?.code, message: String(normalized?.message || normalized) });
         if (linked.signal.aborted) break;
+      } finally {
+        if (request !== linked) request.cleanup();
       }
     }
     const last = errors.at(-1) || {};
