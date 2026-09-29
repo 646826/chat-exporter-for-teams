@@ -20,3 +20,7 @@ Baseline: 79 unit tests pass. Existing browser runner is Linux-only (xvfb-run) a
 Ruling: release the bounded 0.2.2 fixes only. The proposed SharePoint URL rewrite was blocked by the tool and was not rerouted through another editing mechanism. Keep its regression explicitly TODO and issue #8 open. The optional privileged transport is not shipped; existing permissions/world model remain unchanged.
 
 Evidence observed: initial reliability regressions failed, then five implemented cases passed. A portable-runner test failed before implementation, then passed. Real browser DOM fixtures failed on role=document classification, then passed with 28 assertions. Stream-timeout, ephemeral-concurrency and early-size-limit regressions failed before the fix, then the 15 lifecycle/stream checks passed. Missing-auth publication policy failed before its correction. No live conversation re-export has been claimed.
+
+## Final review gate
+
+Initial full GitHub CI passed (36576395825, 75ba204). Independent review found five P2 issues; all eleven new focused regression cases failed as expected. Applying the corrective source change was blocked, and the source diff remained empty afterward. PR #9 stays draft; no merge, installation or publication is authorized by a green gate. See docs/reviews/2026-09-29-0.2.2.md.

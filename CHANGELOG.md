@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.2.2 — 2026-09-29
+## 0.2.2 — Unreleased candidate (review blocked)
 
 - Fix false attachment detection for ordinary links and generic document containers.
 - Add bounded transient retries, stream timeout cancellation and bounded ephemeral-media capture.
