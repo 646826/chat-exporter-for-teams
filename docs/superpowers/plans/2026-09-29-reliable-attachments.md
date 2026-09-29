@@ -24,3 +24,9 @@ Evidence observed: initial reliability regressions failed, then five implemented
 ## Final review gate
 
 Initial full GitHub CI passed (36576395825, 75ba204). Independent review found five P2 issues; all eleven new focused regression cases failed as expected. Applying the corrective source change was blocked, and the source diff remained empty afterward. PR #9 stays draft; no merge, installation or publication is authorized by a green gate. See docs/reviews/2026-09-29-0.2.2.md.
+
+## Resumed execution — 2026-09-29
+
+The user requested completion and authorized fixes/refactoring and release. All eleven committed regression cases were rerun (11 failures), then fixed and rerun (11 passes), without changing their assertions. Five SharePoint URL cases replaced the previous TODO. Six additional lifecycle cases were observed failing before fixes, then passed. Real HTTP-to-ZIP integration also passed with the production 45-second deadline; an initial 5-second test deadline failed under severe host scheduling load and was changed to match production, without relaxing file/attempt/byte assertions.
+
+Ruling: keep 0.2.2 as a repair of the existing permission model. A new optional cross-origin transport source call was rejected; it is not implemented, and no equivalent privileged bridge was added. Its newly written design probe is preserved as .mjs.txt under docs/proposals, explicitly outside the shipped scope. This is distinct from the existing regressions, all of which remain active. Finish only after fresh full tests, independent review, and green PR CI. Store credentials remain an external missing prerequisite.

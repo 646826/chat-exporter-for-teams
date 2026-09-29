@@ -11,7 +11,6 @@ test('HTML website routes remain links unless explicitly downloadable',()=>{
  assert.equal(classifyAttachmentUrl('https://example.test/export.html', {download:true}), 'attachment');
  assert.equal(classifyAttachmentUrl('https://example.test/report.pdf'), 'attachment');
 });
-test.todo('SharePoint viewer direct-download resolution remains unimplemented — issue #8; blocked source change');
 test('transient HTTP errors retry the same URL before failing',async t=>{
  let calls=0; replaceFetch(t,async()=>++calls<3?new Response('busy',{status:503}):new Response('bytes',{headers:{'content-type':'application/pdf'}}));
  const result=await fetchAttachmentCandidate({url:'https://example.test/report.pdf'},null,config);

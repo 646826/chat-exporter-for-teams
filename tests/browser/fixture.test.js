@@ -1,9 +1,11 @@
+import { fetchAttachmentCandidate, downloadAttachments } from '../../src/content/attachments.js';
 import { createProgressOverlay } from '../../src/content/overlay.js';
 import {
   collectMessageUrls, extractMessageElement, findMessageNodes, findScrollContainer, sanitizeMessageHtml,
 } from '../../src/content/teams-adapter.js';
 import { createPopupView } from '../../src/popup/view.js';
 
+async function runBrowserFixtures() {
 const output = document.getElementById('test-output');
 const assertions = [];
 function assert(value, message) {
@@ -77,6 +79,23 @@ try {
   assert(summaryOverlay.host.shadowRoot.querySelector('.status').textContent.includes('1 failed'), 'completion reports missing-file counts');
   summaryOverlay.close();
 
+  const browserConfig = { attachmentTimeoutMs: 5000, attachmentRetries: 0, attachmentConcurrency: 1, maxSingleAttachmentBytes: 1000, maxTotalAttachmentBytes: 1000, includeAttachments: true };
+  const binaryUrl = URL.createObjectURL(new Blob([new Uint8Array([0, 255, 1, 128, 64])], { type: 'application/octet-stream' }));
+  const emptyUrl = URL.createObjectURL(new Blob([], { type: 'application/octet-stream' }));
+  try {
+    const loaded = await fetchAttachmentCandidate({ url: binaryUrl, nameHint: 'binary.bin' }, null, browserConfig);
+    assert(Array.from(new Uint8Array(await loaded.blob.arrayBuffer())).join(',') === '0,255,1,128,64', 'real browser Blob fetch preserves all binary bytes');
+    const empty = await fetchAttachmentCandidate({ url: emptyUrl, nameHint: 'empty.bin' }, null, browserConfig);
+    assert(empty.blob.size === 0, 'real browser preserves zero-byte attachments');
+    const data = await fetchAttachmentCandidate({ url: 'data:text/plain;base64,aGVsbG8=', nameHint: 'hello.txt' }, null, browserConfig);
+    assert(await data.blob.text() === 'hello', 'real browser decodes data attachments');
+    const controller = new AbortController();
+    controller.abort(new Error('browser cancellation'));
+    let cancelled = false;
+    try { await fetchAttachmentCandidate({ url: binaryUrl }, controller.signal, browserConfig); } catch (error) { cancelled = error === controller.signal.reason; }
+    assert(cancelled, 'browser cancellation preserves the original reason');
+  } finally { URL.revokeObjectURL(binaryUrl); URL.revokeObjectURL(emptyUrl); }
+
   output.dataset.testStatus = 'pass';
   output.textContent = `PASS ${assertions.length}`;
 } catch (error) {
@@ -84,3 +103,6 @@ try {
   output.textContent = `FAIL ${error && error.stack || error}`;
   document.documentElement.dataset.testFailure = String(error && error.message || error);
 }
+
+}
+runBrowserFixtures();

@@ -1,0 +1,91 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+
+const access = await import('../../src/shared/file-access.js').catch(() => ({}));
+const host = await import('../../src/shared/download-host.js').catch(() => ({}));
+const client = await import('../../src/content/download-client.js').catch(() => ({}));
+const url = 'https://example.sharepoint.com/sites/Test/_layouts/15/download.aspx?UniqueId=11111111-2222-4333-8444-555555555555';
+function event() {
+  const listeners = new Set();
+  return { addListener(fn) { listeners.add(fn); }, removeListener(fn) { listeners.delete(fn); }, emit(...args) { for (const fn of [...listeners]) fn(...args); } };
+}
+function pair(sender) {
+  const messages = [];
+  const a = {name:'teams-file-download-v1',onMessage:event(),onDisconnect:event()};
+  const b = {name:a.name,sender,onMessage:event(),onDisconnect:event()};
+  let disconnected = false;
+  for (const [from,to] of [[a,b],[b,a]]) {
+    from.postMessage = message => { if(disconnected) throw new Error('port closed'); messages.push(message); queueMicrotask(()=>to.onMessage.emit(message)); };
+    from.disconnect = () => { if(disconnected)return;disconnected=true;queueMicrotask(()=>to.onDisconnect.emit()); };
+  }
+  return {a,b,messages};
+}
+async function environment({permissions=true,senderPatch={},sessionPatch={},fetchImpl=async()=>new Response('file')}={}) {
+  assert.equal(typeof access.createDownloadSession,'function','download session implementation must exist');
+  assert.equal(typeof host.serveDownloadPort,'function','bounded download host implementation must exist');
+  assert.equal(typeof client.fetchThroughExtension,'function','isolated download client implementation must exist');
+  const store={}; const ports=[];let fetches=0;
+  const sender={id:'test-extension',tab:{id:42},frameId:0,documentId:'document-1',url:'https://teams.cloud.microsoft/v2/',...senderPatch};
+  const api={runtime:{id:'test-extension'},permissions:{contains:async()=>permissions},storage:{session:{
+    async set(values){Object.assign(store,values);},async get(key){return key==null?{...store}:{[key]:store[key]};},async remove(key){delete store[key];}
+  }}};
+  const session = await access.createDownloadSession(api,42,'document-1');
+  const key=Object.keys(store)[0];Object.assign(store[key],sessionPatch);
+  api.runtime.connect=()=>{
+    const portsPair=pair(sender);ports.push(portsPair);
+    host.serveDownloadPort(portsPair.b,api,async(...args)=>{fetches++;return fetchImpl(...args);});
+    return portsPair.a;
+  };
+  return {api,session,ports,store,get fetches(){return fetches;}};
+}
+const config={attachmentTimeoutMs:1000,maxSingleAttachmentBytes:1_000_000};
+
+test('only HTTPS SharePoint file resources qualify for privileged download',()=>{
+  assert.equal(typeof access.isSharePointFileUrl,'function');
+  assert.equal(access.isSharePointFileUrl(url),true);
+  for(const value of ['https://example.sharepoint.com.evil.test/file.pdf','http://example.sharepoint.com/file.pdf','https://user:pass@example.sharepoint.com/file.pdf','https://example.sharepoint.com:444/file.pdf','https://example.sharepoint.com/_api/web','https://example.sharepoint.com/sites/Home','file:///tmp/file.pdf']) assert.equal(access.isSharePointFileUrl(value),false,value);
+});
+test('authorized transport preserves bytes with bounded messages and pull backpressure',async()=>{
+  const bytes=Uint8Array.from({length:180000},(_,i)=>i%251);
+  const env=await environment({fetchImpl:async()=>new Response(bytes,{headers:{'content-type':'application/pdf','content-disposition':'attachment; filename="report.pdf"'}})});
+  const response=await client.fetchThroughExtension(url,{}, {...config,downloadSession:env.session},env.api.runtime);
+  assert.equal(response.status,200);assert.equal(response.headers.get('content-type'),'application/pdf');
+  assert.equal(env.ports[0].messages.filter(m=>m.type==='chunk').length,0,'no bytes before consumer read');
+  assert.deepEqual(new Uint8Array(await response.arrayBuffer()),bytes);
+  assert.ok(env.ports[0].messages.filter(m=>m.type==='chunk').every(m=>m.data.length<=65536));
+  assert.equal(env.fetches,1);
+});
+for(const senderPatch of [{id:'other-extension'},{frameId:1},{documentId:'different-document'},{url:'https://evil.test/'},{tab:{id:43}}]) {
+  test('unauthorized sender is rejected before network: '+JSON.stringify(senderPatch),async()=>{
+    const env=await environment({senderPatch});
+    await assert.rejects(client.fetchThroughExtension(url,{}, {...config,downloadSession:env.session},env.api.runtime));
+    assert.equal(env.fetches,0);
+  });
+}
+test('denied optional access is explicit and does not make a network request',async()=>{
+ const env=await environment({permissions:false});
+ await assert.rejects(client.fetchThroughExtension(url,{}, {...config,downloadSession:env.session},env.api.runtime),e=>e.code==='ATTACHMENT_PERMISSION_REQUIRED');
+ assert.equal(env.fetches,0);
+});
+test('expired session cannot download',async()=>{
+ const env=await environment({sessionPatch:{expiresAt:0}});
+ await assert.rejects(client.fetchThroughExtension(url,{}, {...config,downloadSession:env.session},env.api.runtime));assert.equal(env.fetches,0);
+});
+test('oversize streamed response rejects without buffering the remaining file',async()=>{
+ let cancels=0;
+ const env=await environment({fetchImpl:async()=>new Response(new ReadableStream({pull(c){c.enqueue(new Uint8Array(16));},cancel(){cancels++;}}))});
+ const response=await client.fetchThroughExtension(url,{}, {...config,maxSingleAttachmentBytes:8,downloadSession:env.session},env.api.runtime);
+ await assert.rejects(response.arrayBuffer(),e=>e.code==='ATTACHMENT_TOO_LARGE');assert.equal(cancels,1);
+});
+test('Cancel interrupts an in-flight file request and closes the port',async()=>{
+ let started; const ready=new Promise(r=>{started=r;}); let wasAborted=false;
+ const env=await environment({fetchImpl:(_url,init)=>{started();return new Promise((resolve,reject)=>init.signal.addEventListener('abort',()=>{wasAborted=true;reject(init.signal.reason);},{once:true}));}});
+ const controller=new AbortController(); const reason=new Error('user cancelled');
+ const promise=client.fetchThroughExtension(url,{signal:controller.signal},{...config,downloadSession:env.session},env.api.runtime);
+ await ready;controller.abort(reason);
+ await assert.rejects(promise,e=>e===reason);await new Promise(r=>setTimeout(r,0));assert.equal(wasAborted,true);
+});
+test('cross-origin redirects never return foreign bytes to the content script',async()=>{
+ const env=await environment({fetchImpl:async()=>{const r=new Response('foreign');Object.defineProperty(r,'url',{value:'https://evil.test/file'});return r;}});
+ await assert.rejects(client.fetchThroughExtension(url,{}, {...config,downloadSession:env.session},env.api.runtime),e=>e.code==='ATTACHMENT_REDIRECT_BLOCKED');
+});

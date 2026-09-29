@@ -87,6 +87,19 @@ export function sharePointDownloadCandidates(rawUrl) {
   }
   const host = normalizeHostname(parsed.hostname);
   if (!(host.endsWith('.sharepoint.com') || host === 'onedrive.live.com' || host === '1drv.ms')) return result;
+  if (/\/_layouts\/15\/download\.aspx$/i.test(parsed.pathname)) return result;
+  if (host.endsWith('.sharepoint.com')) {
+    const path = parsed.pathname.replace(/^\/:[a-z]:\/r(?=\/)/i, '');
+    const viewer = path.match(/^(.*)\/_layouts\/15\/(?:Doc|WopiFrame)\.aspx$/i);
+    const sourceDoc = parsed.searchParams.get('sourcedoc') || '';
+    const guid = sourceDoc.replace(/^\{([0-9a-f-]+)\}$/i, '$1');
+    if (viewer && /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(guid)) {
+      const direct = new URL(`${viewer[1]}/_layouts/15/download.aspx`, parsed.origin);
+      direct.searchParams.set('UniqueId', guid);
+      result.unshift(direct.href);
+    }
+  }
+
 
   for (const entries of [
     [['action', 'download']],
